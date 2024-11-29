@@ -25,4 +25,9 @@ export enum MemberType {
         }
         registerEnumType (MemberAuthType,{
         name:"MemberAuthType",
-   });
+   }
+  
+  
+  );
+
+   
