@@ -43,3 +43,9 @@ export class LoginInput{
     memberPassword:string;
     
 }
+
+
+/**
+ * @ InputType
+ *  @ IsNotEmpty            bular hammasi decoratorlar!
+ * **/
