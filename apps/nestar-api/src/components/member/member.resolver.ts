@@ -51,14 +51,13 @@ export class MemberResolver {
     
         return `Hi ${memberNick}`;
     }
-    @Roles(MemberType.USER)
+    @Roles(MemberType.USER ,MemberType.AGENT)
     @UseGuards(RolesGuard)
     @Query(()=>String)
-    public async checkAuthRoles(@AuthMember("memberNick") memberNick:string):Promise<string>{
+    public async checkAuthRoles(@AuthMember() authMember:Member):Promise<string>{
         console.log("checkAuthRoles");
-        console.log( "memberNick",memberNick);
     
-        return `Hi ${memberNick}`;
+        return `Hi ${authMember.memberNick},you are ${authMember.memberType} (memberId; ${authMember._id})`;
     }
 
     @Query(()=> String)
