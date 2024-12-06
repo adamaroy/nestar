@@ -20,7 +20,9 @@ private authService:AuthService,
         try{
             const result = await this.memberModel.create(input);
         //TODO:  AUTHENTICATION via TOKEN 
-            return result;
+        result.accessToken = await this.authService.createToken(result);
+            
+        return result;
         }catch(err){
             console.log("Error,Service.model:",err.message);
             throw new BadRequestException(Message.USED_MEMBER_NICK_OR_PHONE);
@@ -45,7 +47,9 @@ private authService:AuthService,
             //TODO:Compare passwords
             const isMatch = await this.authService.comparePassword(input.memberPassword,response.memberPassword);
             if(!isMatch)throw new InternalServerErrorException(Message.WRONG_PASSWORD);
-        return response;
+            
+            response.accessToken=await this.authService.createToken(response);
+            return response;
         }
 
     public async updateMember():Promise <string>{
