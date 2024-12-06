@@ -38,3 +38,9 @@ export class MemberResolver {
         return this.memberService.getMember();
     }
 }
+
+//ISHGA TUSHADI
+
+// (1) INTERCERPTORLAR(REQ) & PIPE & GUARD 
+// (2) API 
+// (3) INTERCERPTORLAR (RES)
