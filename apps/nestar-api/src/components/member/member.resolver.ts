@@ -37,6 +37,21 @@ export class MemberResolver {
         console.log("Query:getMember");
         return this.memberService.getMember();
     }
+    /** ADMIN **/ 
+     // Authorization: ADMIN
+     @Mutation (()=>String)
+     public async getAllMembersByAdmin(): Promise<string>{
+         console.log("Mutation:getAllMembersByAdmin");
+         return this.memberService.getAllMembersByAdmin();
+         
+     }
+    // Authorization: ADMIN
+    @Mutation (()=>String)
+    public async updateMemberByAdmin(): Promise<string>{
+        console.log("Mutation:updateMemberByAdmin");
+        return this.memberService.updateMemberByAdmin();
+        
+    }
 }
 
 //ISHGA TUSHADI
