@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
-import { Member } from '../../libs/dto/member/member';
-import { LoginInput, MemberInput } from '../../libs/dto/member/member.input';
-import { MemberStatus } from '../../libs/enums/member.enum';
-import { Message } from '../../libs/enums/common.enum';
+import { Member, Members } from '../../libs/dto/member/member';
+import { AgentsInquiry, LoginInput, MemberInput } from '../../libs/dto/member/member.input';
+import { MemberStatus, MemberType } from '../../libs/enums/member.enum';
+import { Direction, Message } from '../../libs/enums/common.enum';
 import { AuthService } from '../auth/auth.service';
 import { MemberUpdate } from '../../libs/dto/member/member.update';
 import { T } from '../../libs/types/common';
@@ -14,106 +14,136 @@ import { ViewGroup } from '../../libs/enums/view.enum';
 
 @Injectable()
 export class MemberService {
+  constructor(
+    @InjectModel('Member') private readonly memberModel: Model<Member>, // Inject Member model
+    private authService: AuthService, // Service for auth utilities
+    private viewService: ViewService, // Service for tracking views
+  ) {}
 
-constructor(@InjectModel("Member")private readonly memberModel:Model<Member>,
-private authService:AuthService,
-private viewService:ViewService,
+  public async signup(input: MemberInput): Promise<Member> {
+    input.memberPassword = await this.authService.hashPassword(input.memberPassword);
+    try {
+      const result = await this.memberModel.create(input);
+      result.accessToken = await this.authService.createToken(result); // Generate access token
+      return result;
+    } catch (err) {
+      console.error('Error during signup:', err.message); // Log the error
+      throw new BadRequestException(Message.USED_MEMBER_NICK_OR_PHONE);
+    }
+  }
 
-){}
+  public async login(input: LoginInput): Promise<Member> {
+    const { memberNick, memberPassword } = input;
+    const response = await this.memberModel
+      .findOne({ memberNick })
+      .select('+memberPassword') // Select password for comparison
+      .exec();
 
-    public async signup(input:MemberInput):Promise <Member>{
-        //Hash password
-        input.memberPassword = await this.authService.hashPassword(input.memberPassword);
-        try{
-            const result = await this.memberModel.create(input);
-        //TODO:  AUTHENTICATION via TOKEN 
-        result.accessToken = await this.authService.createToken(result);
-            
-        return result;
-        }catch(err){
-            console.log("Error,Service.model:",err.message);
-            throw new BadRequestException(Message.USED_MEMBER_NICK_OR_PHONE);
-            
-        }
-
-      
+    if (!response || response.memberStatus === MemberStatus.DELETE) {
+      throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
     }
 
-    public async login(input:LoginInput):Promise <Member>{
-        const {memberNick,memberPassword}=input;
-        const response:Member =await this.memberModel
-        .findOne({memberNick:memberNick})
-        .select("+memberPassword")
-        .exec();
-            if(!response || response.memberStatus === MemberStatus.DELETE){
-                throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
-            }else if (response.memberStatus===MemberStatus.BLOCK){
-                throw new InternalServerErrorException(Message.BLOCKED_USER);
-            }
+    if (response.memberStatus === MemberStatus.BLOCK) {
+      throw new InternalServerErrorException(Message.BLOCKED_USER);
+    }
 
-            //TODO:Compare passwords
-            const isMatch = await this.authService.comparePassword(input.memberPassword,response.memberPassword);
-            if(!isMatch)throw new InternalServerErrorException(Message.WRONG_PASSWORD);
-            
-            response.accessToken=await this.authService.createToken(response);
-            return response;
-        }
+    const isMatch = await this.authService.comparePassword(memberPassword, response.memberPassword);
+    if (!isMatch) throw new InternalServerErrorException(Message.WRONG_PASSWORD);
 
-        public async updateMember(
-            memberId: ObjectId,
-            input: MemberUpdate,
-        ): Promise<Member> {
-            // Log the input to debug issues
-            console.log('Update input:', input);
-        
-            // Validate and update the member
-            const result: Member = await this.memberModel
-                .findOneAndUpdate(
-                    {
-                        _id: memberId,
-                        memberStatus: MemberStatus.ACTIVE,
-                    },
-                    input,
-                    { new: true },
-                )
-                .exec();
-        
-            if (!result) {
-                throw new InternalServerErrorException(Message.UPDATE_FAILED);
-            }
-        
-            result.accessToken = await this.authService.createToken(result);
-            return result;
-        }
-        
+    response.accessToken = await this.authService.createToken(response); // Refresh access token
+    return response;
+  }
 
-     public async getMember(memberId:ObjectId,targetId:ObjectId):Promise <Member>{
-        const search : T ={
-            _id: targetId,
-            memberStatus:{
-                $in:[MemberStatus.ACTIVE,MemberStatus.BLOCK],
-            },
-        };
-        const targetMember =await this.memberModel.findOne(search).lean().exec();
-        if(!targetMember)throw new InternalServerErrorException(Message.NO_DATA_FOUND); 
-        if (memberId) {
-            const viewInput = { memberId: memberId,
-                 viewRefId:targetId ,viewGroup: ViewGroup.MEMBER};
-            const newView = await this.viewService.recordView(viewInput);
-            
-        if(newView){
-            await this.memberModel.findByIdAndUpdate(search,{$inc:{memberViews:1}},{mew:true}).exec();
-            targetMember.memberViews++;
-        }
-        
-        }
-        return targetMember;
-        }
-        public async getAllMembersByAdmin():Promise <string>{
-            return "getAllMembersByAdmin executed!";
-            }
-    
-         public async updateMemberByAdmin():Promise <string>{
-            return "updateMemberByAdmin executed!";
-            }
+  public async updateMember(memberId: ObjectId, input: MemberUpdate): Promise<Member> {
+    console.log('Update input:', input); // Debug input
+
+    const result = await this.memberModel
+      .findOneAndUpdate(
+        { _id: memberId, memberStatus: MemberStatus.ACTIVE },
+        input,
+        { new: true },
+      )
+      .exec();
+
+    if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+
+    result.accessToken = await this.authService.createToken(result); // Refresh token
+    return result;
+  }
+
+  public async getMember(memberId: ObjectId, targetId: ObjectId): Promise<Member> {
+    const search: T = {
+      _id: targetId,
+      memberStatus: { $in: [MemberStatus.ACTIVE, MemberStatus.BLOCK] },
+    };
+
+    const targetMember = await this.memberModel.findOne(search).lean().exec();
+    if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+
+    if (memberId) {
+      const viewInput: ViewInput = {
+        memberId,
+        viewRefId: targetId,
+        viewGroup: ViewGroup.MEMBER,
+      };
+
+      const newView = await this.viewService.recordView(viewInput);
+      if (newView) {
+        await this.memberModel
+          .findByIdAndUpdate(targetId, { $inc: { memberViews: 1 } }, { new: true })
+          .exec();
+        targetMember.memberViews++;
+      }
+    }
+
+    return targetMember;
+  }
+
+  public async getAgents(memberId: ObjectId, input: AgentsInquiry): Promise<Members> {
+    const { text } = input.search;
+
+    const match: T = {
+      memberType: MemberType.AGENT,
+      memberStatus: MemberStatus.ACTIVE,
+    };
+
+    if (text) match.memberNick = { $regex: new RegExp(text, 'i') };
+
+    const sort: T = {
+      [input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC,
+    };
+
+    console.log('match:', match); // Log match criteria for debugging
+
+    const result = await this.memberModel
+      .aggregate([
+        { $match: match }, // Filter active agents
+        { $sort: sort }, // Sort based on input
+        {
+          $facet: {
+            list: [
+              { $skip: (input.page - 1) * input.limit },
+              { $limit: input.limit },
+            ],
+            metaCounter: [{ $count: 'total' }],
+          },
+        },
+      ])
+      .exec();
+
+
+    if (!result.length || !result[0].metaCounter.length) {
+      throw new InternalServerErrorException(Message.NO_DATA_FOUND); // No agents found
+    }
+
+    return result[0]; // Return the list and metadata
+  }
+
+  public async getAllMembersByAdmin(): Promise<string> {
+    return 'getAllMembersByAdmin executed!';
+  }
+
+  public async updateMemberByAdmin(): Promise<string> {
+    return 'updateMemberByAdmin executed!';
+  }
 }
