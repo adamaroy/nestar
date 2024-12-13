@@ -61,5 +61,16 @@ public async getProperties(
     console.log('Query: getProperties');
     return await this.propertyService.getProperties(memberId, input);
 }
+@Roles(MemberType.AGENT)
+@UseGuards(RolesGuard)
+@Query((returns) => Properties)
+public async getAgentProperties(
+    @Args('input') input: AgentPropertiesInquiry,
+    @AuthMember('_id') memberId: ObjectId,
+): Promise<Properties> {
+    console.log('Query: getAgentProperties');
+    return await this.propertyService.getAgentProperties(memberId, input);
+}
+
 
 }
