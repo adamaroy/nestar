@@ -9,6 +9,8 @@ import { StatisticModifier, T } from '../../libs/types/common';
 import { PropertyStatus } from '../../libs/enums/property.enum';
 import { ViewGroup } from '../../libs/enums/view.enum';
 import { ViewService } from '../view/view.service';
+import moment from 'moment';
+import { PropertyUpdate } from '../../libs/dto/property/property.update';
 
 
 @Injectable()
@@ -67,6 +69,41 @@ export class PropertyService {
                 { new: true },
             )
             .exec();
+    }
+    
+    public async updateProperty(memberId: ObjectId, input: PropertyUpdate): Promise<Property> {
+        let { propertyStatus, soldAt, deletedAt } = input;
+    
+        const search: T = {
+            _id: input._id,
+            memberId: memberId,
+            propertyStatus: PropertyStatus.ACTIVE,
+        };
+    
+        // Check if property is sold or deleted, update timestamps
+        if (propertyStatus === PropertyStatus.SOLD) soldAt = moment().toDate();
+        else if (propertyStatus === PropertyStatus.DELETE) deletedAt = moment().toDate();
+    
+        // Update the property in the database
+        const result = await this.propertyModel
+            .findOneAndUpdate(search, input, {
+                new: true,
+            })
+            .exec();
+    
+        // If the update fails, throw an error
+        if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+    
+        // If the property was sold or deleted, update member properties count
+        if (soldAt || deletedAt) {
+            await this.memberService.memberStatsEditor({
+                _id: memberId,
+                targetKey: 'memberProperties',
+                modifier: -1,
+            });
+        }
+    
+        return result;
     }
     
     
