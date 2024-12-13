@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import {ConfigModule} from '@nestjs/config';
-import {GraphQLModule} from '@nestjs/graphql';
-import {ApolloDriver} from '@nestjs/apollo';
+import { ConfigModule } from '@nestjs/config';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver } from '@nestjs/apollo';
 import { AppResolver } from './app.resolver';
 import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
@@ -11,35 +11,37 @@ import { T } from './libs/types/common';
 import { Message } from './libs/enums/common.enum';
 
 @Module({
-  imports: 
-  [
-    ConfigModule.forRoot(),
+  imports: [
+    // Konfiguratsiya moduli: muhit o'zgaruvchilari (env) bilan ishlash uchun
+
+    ConfigModule.forRoot(),       // GraphQL moduli sozlamalari
     GraphQLModule.forRoot({
-    driver:ApolloDriver,
-    playground:true,
-    uploads:false,
-    autoSchemaFile:true,
+      driver: ApolloDriver,       // Apollo GraphQL drayveri
+      playground: true,           // GraphQL Playground yoqilgan
+      uploads: false,             // Fayl yuklash imkoniyati o'chirilgan
+      autoSchemaFile: true,       // GraphQL sxemasi avtomatik yaratiladi
 
-    //CUSTOMIZED ERROR 
+      // Xatolarni formatlash (customized error handling)
 
-    formatError: (error: T)=>{
-      const graphqlFormatedError = {
-        code: error?.extensions.code,
-        message: 
-          error?.extensions?.exception?.response?.message || 
-          error?.extensions?.response?.message || 
-          error?.message,
+      formatError: (error: T) => {
+        const graphqlFormatedError = {
+          code: error?.extensions.code,   // Xato kodi
+          message:
+            error?.extensions?.exception?.response?.message ||      // Exception ichidagi xabar
+            error?.extensions?.response?.message ||                 // Javob ichidagi xabar
+            error?.message, // Asosiy xabar
+        };
+        console.log('GRAPHQL GLOBAL ERROR:', graphqlFormatedError); // Xatolarni log qilish
+        return graphqlFormatedError;
+      },
+    }),
 
-      };
-      console.log("GRAPHQL GLOBAL ERROR:",graphqlFormatedError);
-      return graphqlFormatedError;
-      
-      
-    }
-  }), ComponentsModule, DatabaseModule,
-],
-  controllers: [AppController],
-  providers: [AppService,AppResolver],
+    // Modullar
+    ComponentsModule, 
+    DatabaseModule, 
+  ],
+  controllers: [AppController],                     // REST endpointlarni boshqarish uchun
+  providers: [AppService, AppResolver],             // Xizmatlar va GraphQL resolverlar
 })
 export class AppModule {}
 
