@@ -29,7 +29,7 @@ export class PropertyResolver {
       return await this.propertyService.createProperty(input);
    }
 
-   @UseGuards(WithoutGuard)
+@UseGuards(WithoutGuard)
 @Query((returns) => Property)
 public async getProperty(
     @Args('propertyId') input: string,
