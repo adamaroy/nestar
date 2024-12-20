@@ -78,31 +78,41 @@ export class MemberService {
 
   public async getMember(memberId: ObjectId, targetId: ObjectId): Promise<Member> {
     const search: T = {
-      _id: targetId,
-      memberStatus: { $in: [MemberStatus.ACTIVE, MemberStatus.BLOCK] },
+        _id: targetId,
+        memberStatus: { $in: [MemberStatus.ACTIVE, MemberStatus.BLOCK] },
     };
 
-    const targetMember = await this.memberModel.findOne(search).lean().exec();
+    const targetMember = await this.memberModel.findOne(search).exec();
     if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
     if (memberId) {
-      const viewInput: ViewInput = {
-        memberId,
-        viewRefId: targetId,
-        viewGroup: ViewGroup.MEMBER,
-      };
+        // Record a view
+        const viewInput: ViewInput = {
+            memberId,
+            viewRefId: targetId,
+            viewGroup: ViewGroup.MEMBER,
+        };
+        const newView = await this.viewService.recordView(viewInput);
+        if (newView) {
+            await this.memberModel
+                .findByIdAndUpdate(targetId, { $inc: { memberViews: 1 } }, { new: true })
+                .exec();
+            targetMember.memberViews++;
+        }
 
-      const newView = await this.viewService.recordView(viewInput);
-      if (newView) {
-        await this.memberModel
-          .findByIdAndUpdate(targetId, { $inc: { memberViews: 1 } }, { new: true })
-          .exec();
-        targetMember.memberViews++;
-      }
+        // Add meLiked aggregation
+        const likeInput = {
+            memberId:memberId,
+            likeRefId: targetId,
+            likeGroup: LikeGroup.MEMBER,
+        };
+        targetMember.meLiked = await this.likeService.checkLikeExistence(likeInput);
     }
 
     return targetMember as Member;
-  }
+}
+
+
 
   public async getAgents(memberId: ObjectId, input: AgentsInquiry): Promise<Members> {
     const { text } = input.search;

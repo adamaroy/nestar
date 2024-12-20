@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Like } from '../../libs/dto/like/like';
+import { Like, MeLiked } from '../../libs/dto/like/like';
 import { LikeInput } from '../../libs/dto/like/like.input';
 import { T } from '../../libs/types/common';
 import { Message } from '../../libs/enums/common.enum';
@@ -18,13 +18,11 @@ export class LikeService {
         let modifier = 1;
 
         if (exist) {
-            // Unlike: delete the existing like entry
-            await this.likeModel.findOneAndDelete(search).exec();
+            await this.likeModel.findOneAndDelete(search).exec(); // Delete the like
             modifier = -1;
         } else {
-            // Like: add a new like entry
             try {
-                await this.likeModel.create(input);
+                await this.likeModel.create(input); // Create a new like
             } catch (err) {
                 console.error("Error, Service.model:", err.message);
                 throw new BadRequestException(Message.CREATE_FAILED);
@@ -32,6 +30,17 @@ export class LikeService {
         }
 
         console.log(`- Like modifier ${modifier} -`);
-        return modifier; // Return the modifier value
+        return modifier;
+    }
+
+    public async checkLikeExistence(input: LikeInput): Promise<MeLiked[]> {
+        const { memberId, likeRefId } = input;
+
+        const result = await this.likeModel.findOne({ memberId, likeRefId }).exec();
+       
+        return result
+        ? [{ memberId, likeRefId, myFavorite: true }]
+        : [];
+    
     }
 }
