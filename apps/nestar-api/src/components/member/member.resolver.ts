@@ -80,7 +80,7 @@ export class MemberResolver {
         const targetId = shapeIntoMongoObjectId(input);
         return await this.memberService.getMember(memberId, targetId);
     }
-
+//LIKE TARGET
     @UseGuards(AuthGuard)
     @Mutation(()=>Member)
     public async likeTargetMember(
