@@ -109,7 +109,7 @@ export class MemberService {
         targetMember.meLiked = await this.likeService.checkLikeExistence(likeInput);
     }
 
-    return targetMember as Member;
+    return targetMember ;
 }
 
 

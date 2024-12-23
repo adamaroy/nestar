@@ -57,13 +57,13 @@ const MemberSchema = new Schema({
         type:String,
       
     },
-    memberProperty:{
+    memberProperties:{
         type:Number,
         default:0,
 
     },
 
-    memberArticle:{
+    memberArticles:{
         type:Number,
         default:0,
     },
