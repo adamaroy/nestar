@@ -186,9 +186,13 @@ export class PropertyService {
         if (options) match['$or'] = options.map((ele) => ({ [ele]: true }));
     }
 
-
+ // Get Favorites for a User
     public async getFavorites (mmeberId:ObjectId,input:OrdinaryInquiry):Promise<Properties>{
         return this.likeService.getFavoritePropersies(mmeberId,input)
+    }
+ // Get Visited for a User
+    public async getVisited (mmeberId:ObjectId,input:OrdinaryInquiry):Promise<Properties>{
+        return this.viewService.getVisitedProperties(mmeberId,input)
     }
 
     /**

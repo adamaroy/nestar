@@ -50,7 +50,9 @@ export class LikeService {
     public async getFavoritePropersies(memberId:ObjectId,input:OrdinaryInquiry):Promise<Properties>{
         const {page,limit}=input; //distraction
         const match:T= {likeGroup:LikeGroup.PROPERTY,memberId:memberId};
-        const data: T =await this.likeModel.aggregate([
+        
+        const data: T =await this.likeModel
+        .aggregate([
             {$match:match},
             {$sort:{updateAt:-1}},
             {
