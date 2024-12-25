@@ -24,7 +24,7 @@ export class FollowService {
       
         const result = await this.registerSubscription(followerId, followingId);
       
-        await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowing', modifier: 1 });
+        await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowings', modifier: 1 });
         await this.memberService.memberStatsEditor({ _id: followingId, targetKey: 'memberFollowers', modifier: 1 });
       
         return result;
@@ -51,7 +51,7 @@ export class FollowService {
         });
         if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
       
-        await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowing', modifier: -1 });
+        await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowings', modifier: -1 });
         await this.memberService.memberStatsEditor({ _id: followingId, targetKey: 'memberFollowers', modifier: -1 });
       
         return result;
