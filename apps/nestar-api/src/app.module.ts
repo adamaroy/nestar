@@ -9,6 +9,7 @@ import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
 import { T } from './libs/types/common';
 import { Message } from './libs/enums/common.enum';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { Message } from './libs/enums/common.enum';
 
     // Modullar
     ComponentsModule, 
-    DatabaseModule, 
+    DatabaseModule, SocketModule, 
   ],
   controllers: [AppController],                     // REST endpointlarni boshqarish uchun
   providers: [AppService, AppResolver],             // Xizmatlar va GraphQL resolverlar
